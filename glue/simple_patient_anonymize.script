@@ -1,0 +1,63 @@
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+import boto3
+import random
+import string
+from pyspark.sql.functions import udf
+from pyspark.sql.types import StringType
+from awsglue.dynamicframe import DynamicFrame
+
+
+## @params: [JOB_NAME]
+args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+datasource0 = glueContext.create_dynamic_frame.from_catalog(database = "simple-patient", table_name = "raw", catalog_id = "716664005094/datalake", transformation_ctx = "datasource0")
+ds0dataframe = datasource0.toDF()
+
+glue = boto3.client(service_name='glue', region_name='us-east-1',
+              endpoint_url='https://glue.us-east-1.amazonaws.com')
+
+patient_meta = glue.get_table(
+    CatalogId='716664005094/datalake',
+    DatabaseName='simple-patient',
+    Name='raw'
+)
+
+cols = patient_meta['Table']['StorageDescriptor']['Columns']
+
+phiDict = {}
+for i, v in enumerate(cols):
+    if( 'Comment' in v) :
+        phiDict[v['Name']] = v['Type']
+
+def randomString(stringLength=10):
+    """Generate a random string of fixed length """
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(stringLength))
+
+latestDF = ds0dataframe;
+
+for k, v in phiDict.items():
+    rand_f = udf(lambda x: randomString(), StringType())
+    latestDF = latestDF.withColumn("phi" + k, rand_f(ds0dataframe[k]))
+
+
+latestDF_dyf = DynamicFrame.fromDF(latestDF, glueContext, "nested")
+
+applymapping1 = ApplyMapping.apply(frame = latestDF_dyf, mappings = [("id", "int", "id", "int"), ("phifirst_name", "string", "first_name", "string"), ("philast_name", "string", "last_name", "string"), ("email", "string", "email", "string"), ("gender", "string", "gender", "string"), ("date_of_birth", "string", "date_of_birth", "string"), ("phone", "string", "phone", "string"), ("address", "string", "address", "string")], transformation_ctx = "applymapping1")
+
+datasink2 = glueContext.write_dynamic_frame.from_options(frame = applymapping1, connection_type = "s3", connection_options = {"path": "s3://reinforce-2019-datalake-medical-patient/anonymized"}, format = "json", transformation_ctx = "datasink2")
+
+
+
+job.commit()
