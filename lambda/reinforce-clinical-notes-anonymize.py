@@ -32,7 +32,16 @@ def lambda_handler(event, context):
     notes = obj['Body'].read().decode('utf-8')
     print(notes)
 
-    result = comprehendmedical.detect_entities(Text=notes)
+    jnotes = json.loads(notes)
+
+    # the result is a Python dictionary:
+    clinic_notes = jnotes["clinic_notes"]
+    clinic_id = jnotes["clinic_id"]
+    print(clinic_notes)
+    print(clinic_id)
+
+    result = comprehendmedical.detect_entities(Text=clinic_notes)
+
     entities = result['Entities'];
     phidict = {}
     # print(phidict[0])
@@ -40,7 +49,8 @@ def lambda_handler(event, context):
     tVal = ''
     beg = ''
     end = ''
-    notes_mod = notes
+    notes = clinic_notes
+    notes_mod = clinic_notes
 
     for entity in entities:
         # print('Entity', entity)
@@ -103,7 +113,12 @@ def lambda_handler(event, context):
 
     notes_mod = notes_mod + notes[me:]
     print(notes_mod)
+
+    notes_mod = '{ "clinic_id":"' + clinic_id + '", "clinic_notes":"' + notes_mod + '"}'
+
     bin_notes = notes_mod.encode()
+
     klst = key.rsplit('/')
     nkey = 'anonymized/' + klst[len(klst) - 1]
+
     s3.put_object(Body=bin_notes, Bucket=bucket, Key=nkey)

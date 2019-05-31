@@ -1,6 +1,7 @@
 import boto3
 import random
 import string
+import json
 
 
 def randomString(stringLength=10):
@@ -82,6 +83,24 @@ for i, x in enumerate(phidict):
 
 notes_mod = notes_mod + notes[me:]
 print(notes_mod)
+csv_notes_mod = '"' + 'notes_anonymized' + ',"' + notes_mod +'"'
+print(csv_notes_mod)
+
+x =  '{ "clinic_id":"101", "clinic_notes":"' +notes_mod + '"}'
+
+# parse x:
+y = json.loads(x)
+
+# the result is a Python dictionary:
+print(y["clinic_notes"])
+
+# convert into JSON:
+y = json.dumps(x)
+
+# the result is a JSON string:
+print(y)
+
+
 
 
 
