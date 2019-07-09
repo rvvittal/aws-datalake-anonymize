@@ -7,6 +7,6 @@ These organizations are looking for new ways to protect their PHI/PII data.
 We present an approach on how you can protect and anonymize PHI/PII elements in your structured data such as patient records 
 and your unstructured data such as clinical notes.
 
-#Architecture
+## Architecture
 
 ![alt text](https://github.com/rvvittal/aws-datalake-anonymize/blob/master/docs/PHI-DataLake-Protection.png)
